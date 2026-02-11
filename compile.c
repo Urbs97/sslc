@@ -323,6 +323,9 @@ int _stdcall parse_main(const char *filePath, const char* origPath, const char* 
 	if (mcpp_lib_main(foo.file, newfile, origPath, dir, NULL, NULL)) { // prevent crash in old Script Editor - NR
 		fclose(foo.file);
 		fclose(newfile);
+#ifndef WIN32
+		remove(tmpbuf);
+#endif
 		if (parseroutput)
 			fclose(parseroutput);
 		return 2;
@@ -335,6 +338,9 @@ int _stdcall parse_main(const char *filePath, const char* origPath, const char* 
 	foo.file = newfile;
 	parse(&foo, NULL);
 	fclose(foo.file);
+#ifndef WIN32
+	remove(tmpbuf);
+#endif
 
 	inited = 1;
 	if (parseroutput)

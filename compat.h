@@ -36,6 +36,7 @@ int strcpy_s(char* dest, size_t destsz, const char* src);
 int strcat_s(char *dest, size_t destsz, const char *src);
 
 #define _stricmp strcasecmp
+#define _stdcall
 #define GetCurrentProcessId() ((unsigned int)getpid())
 #define _mkdir(path) mkdir((path), 0777)
 #define _chdir       chdir

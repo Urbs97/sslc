@@ -4,10 +4,13 @@ set(EXECUTABLE_NAME sslc)
 
 project(${EXECUTABLE_NAME})
 
+option(BUILD_SHARED_LIB "Build shared library (libparser.so) instead of executable" OFF)
+
 # Set 32-bit flag for all targets because it segfaults on 64-bit
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 set(SOURCES
   compile.c
@@ -27,7 +30,23 @@ set(SOURCES
   compat.c
 )
 
-add_executable(${EXECUTABLE_NAME} ${SOURCES})
+if(BUILD_SHARED_LIB)
+  add_library(parser SHARED ${SOURCES})
+  target_compile_definitions(parser PRIVATE BUILDING_DLL)
+
+  # Generate version script from exports.def (single source of truth for both Windows and Linux)
+  if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
+    file(STRINGS ${CMAKE_SOURCE_DIR}/exports.def _symbols)
+    list(FILTER _symbols EXCLUDE REGEX "^(LIBRARY|EXPORTS|$)")
+    list(TRANSFORM _symbols STRIP)
+    string(REPLACE ";" ";\n    " _symbols_str "${_symbols}")
+    file(WRITE ${CMAKE_BINARY_DIR}/exports.map
+      "{\n  global:\n    ${_symbols_str};\n  local:\n    *;\n};\n")
+    target_link_options(parser PRIVATE "-Wl,--version-script=${CMAKE_BINARY_DIR}/exports.map")
+  endif()
+else()
+  add_executable(${EXECUTABLE_NAME} ${SOURCES})
+endif()
 
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
