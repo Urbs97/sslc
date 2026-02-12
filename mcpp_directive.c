@@ -1375,7 +1375,7 @@ void    dump_a_def(
             if (! newdef) {
                 /* Make parms[] for dump_repl() */
                 for (i = 0, cp = dp->parmnames; i < numargs;
-                        i++, cp = cp1 + 1) {
+                        i++, cp = cp1 ? cp1 + 1 : cp) {
                     if ((cp1 = strchr( cp, ',')) == NULL)   /* The last arg */
                         parms[ i].len = strlen( cp);
                     else
