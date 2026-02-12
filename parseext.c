@@ -18,6 +18,7 @@ void emitNodeExpr(Procedure *p, NodeList *n, LexData *data) {
 }
 
 void appendNodeListPart(NodeList* dst, const NodeList* src, int offset, int length) {
+	if (length <= 0) return;
 	dst->nodes = realloc(dst->nodes, sizeof(Node) * (dst->numNodes + length + 9));
 	memcpy(&dst->nodes[dst->numNodes], &src->nodes[offset], sizeof(Node) * (length));
 	dst->numNodes += length;
