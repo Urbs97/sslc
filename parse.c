@@ -530,6 +530,7 @@ int addVariable(VariableList *var, char **namelist, int type, char *name) {
 	v[i].numRefs = 0;
 	v[i].references = 0;
 	v[i].initialized = 0;
+	v[i].arrayLen = 0;
 	v[i].declared = lexGetLineno(currentInputStream);
 	v[i].fdeclared = lexGetFilename(currentInputStream);
 	var->variables = v;
