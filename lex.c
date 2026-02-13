@@ -67,7 +67,7 @@ void FreeFileNames() {
 
 int old_atoi(const char* p )
 {
-	int value;
+	unsigned int value;
 	char sign;
 
 	while(isspace(*p)) {
@@ -83,30 +83,31 @@ int old_atoi(const char* p )
 	value = 0;
 
 	while(isdigit(*p)) {
-		value = value * 10 + *p - '0';
+		value = value * 10 + (unsigned int)(*p - '0');
 		++p;
 	}
 
 	if (sign == '-' ) {
-		value = - value;
+		return -(int)value;
 	}
 
-	return( value );
+	return (int)value;
 }
 
 int atoi_hex(const char* p )
 {
-	int value, tmp;
+	unsigned int value;
+	int tmp;
 	unsigned int i;
 	value = 0;
 
 	for(i=0;i<strlen(p);i++) {
 		if(p[i]>='0'&&p[i]<='9') tmp=p[i]-'0';
 		else tmp=p[i]-'a' + 10;
-		value = value*16 + tmp;
+		value = value*16 + (unsigned int)tmp;
 	}
 
-	return value;
+	return (int)value;
 }
 
 /* Old behaviour atoi (end) */
