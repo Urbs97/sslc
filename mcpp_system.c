@@ -45,6 +45,11 @@
 #include "compat.h"
 #endif
 
+#ifndef _WIN32
+#include <dirent.h>
+#include <strings.h>
+#endif
+
 #define getcwd( buf, size)  _getcwd( buf, size)
 #include    "sys/types.h"
 #include    "sys/stat.h"                        /* For stat()       */
@@ -636,6 +641,92 @@ static char *   norm_dir(
     return  norm_name;
 }
 
+#ifndef _WIN32
+/*
+ * Resolve a path case-insensitively, component by component.
+ * SSL scripts originate on Windows where paths are case-insensitive,
+ * but Linux filesystems are case-sensitive.
+ * 'buf' is the combined dir+fname path that failed a direct stat().
+ * If resolution succeeds, 'buf' is rewritten with the correct-case path
+ * and returns 1. Otherwise returns 0 and 'buf' is unmodified.
+ */
+static int  resolve_icase(
+    char *  buf
+)
+{
+    char    resolved[ PATHMAX+1];
+    char *  src;
+    char *  component;
+    size_t  rpos = 0;
+
+    if (buf[0] != PATH_DELIM)
+        return  0;                  /* Only handle absolute paths   */
+
+    resolved[0] = PATH_DELIM;
+    rpos = 1;
+    src = buf + 1;
+
+    while (*src) {
+        /* Extract the next path component */
+        component = src;
+        while (*src && *src != PATH_DELIM)
+            src++;
+
+        {
+            size_t  clen = (size_t)(src - component);
+            DIR *   dp;
+            struct dirent * entry;
+            int     found = 0;
+            char    save;
+
+            if (clen == 0) {
+                if (*src) src++;
+                continue;
+            }
+
+            /* Null-terminate resolved so far for opendir */
+            resolved[rpos] = EOS;
+
+            dp = opendir(rpos == 1 ? "/" : resolved);
+            if (!dp)
+                return  0;
+
+            save = component[clen];
+            component[clen] = EOS;
+
+            while ((entry = readdir(dp)) != NULL) {
+                if (strcasecmp(entry->d_name, component) == 0) {
+                    size_t  nlen = strlen(entry->d_name);
+                    if (rpos + nlen + 1 > PATHMAX) {
+                        closedir(dp);
+                        component[clen] = save;
+                        return  0;
+                    }
+                    memcpy(resolved + rpos, entry->d_name, nlen);
+                    rpos += nlen;
+                    found = 1;
+                    break;
+                }
+            }
+            closedir(dp);
+            component[clen] = save;
+
+            if (!found)
+                return  0;
+
+            if (*src) {
+                resolved[rpos++] = PATH_DELIM;
+                src++;
+            }
+        }
+    }
+
+    resolved[rpos] = EOS;
+    strcpy(buf, resolved);
+    return  1;
+}
+#endif
+
 static char *   norm_path(
     const char *    dir,        /* Include directory (maybe "", never NULL) */
     const char *    fname,
@@ -686,9 +777,17 @@ static char *   norm_path(
     if (stat( slbuf1, & st_buf) != 0        /* Non-existent         */
             || (! fname && ! S_ISDIR( st_buf.st_mode))
                 /* Not a directory though 'fname' is not specified  */
-            || (fname && ! S_ISREG( st_buf.st_mode)))
+            || (fname && ! S_ISREG( st_buf.st_mode))) {
                 /* Not a regular file though 'fname' is specified   */
-        return  NULL;
+#ifndef _WIN32
+        /* Fall back to case-insensitive resolution for Windows-origin scripts */
+        if (! resolve_icase( slbuf1)
+                || stat( slbuf1, & st_buf) != 0
+                || (! fname && ! S_ISDIR( st_buf.st_mode))
+                || (fname && ! S_ISREG( st_buf.st_mode)))
+#endif
+            return  NULL;
+    }
 
     if (! fname) {
         slbuf1[ len] = PATH_DELIM;          /* Append PATH_DELIM    */
