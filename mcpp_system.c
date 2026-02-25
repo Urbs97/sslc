@@ -757,6 +757,9 @@ static char *   norm_path(
     char    slbuf1[ PATHMAX+1];             /* Working buffer       */
 
     struct _stat    st_buf;
+#ifndef _WIN32
+    int     need_icase = 0;
+#endif
 
     if (! dir || (*dir && is_full_path( fname)))
         cfatal( "Bug: Wrong argument to norm_path()"        /* _F_  */
@@ -780,13 +783,10 @@ static char *   norm_path(
             || (fname && ! S_ISREG( st_buf.st_mode))) {
                 /* Not a regular file though 'fname' is specified   */
 #ifndef _WIN32
-        /* Fall back to case-insensitive resolution for Windows-origin scripts */
-        if (! resolve_icase( slbuf1)
-                || stat( slbuf1, & st_buf) != 0
-                || (! fname && ! S_ISDIR( st_buf.st_mode))
-                || (fname && ! S_ISREG( st_buf.st_mode)))
+        need_icase = 1;     /* Retry after path is made absolute    */
+#else
+        return  NULL;
 #endif
-            return  NULL;
     }
 
     if (! fname) {
@@ -837,6 +837,19 @@ static char *   norm_path(
             break;
         }
     }
+
+#ifndef _WIN32
+    if (need_icase) {
+        /* Path is now absolute — retry with case-insensitive resolution */
+        if (! resolve_icase( norm_name)
+                || stat( norm_name, & st_buf) != 0
+                || (! fname && ! S_ISDIR( st_buf.st_mode))
+                || (fname && ! S_ISREG( st_buf.st_mode))) {
+            free( norm_name);
+            return  NULL;
+        }
+    }
+#endif
 
     return  norm_name;
 }
