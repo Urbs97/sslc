@@ -1444,8 +1444,6 @@ static char *   get_line(
  * Convert [CR+LF] to [LF]. 
  */
 {
-#define cr_warn_level 1
-    static int  cr_converted;
     int     converted = FALSE;
     int     len;                            /* Line length - alpha  */
     char *  ptr;
@@ -1478,11 +1476,6 @@ static char *   get_line(
         if (len >= 2 && *(ptr + len - 2) == '\r') {         /* [CR+LF]      */
             *(ptr + len - 2) = '\n';
             *(ptr + --len) = EOS;
-            if (! cr_converted && (warn_level & cr_warn_level)) {
-                cwarn( "Converted [CR+LF] to [LF]"  /* _W1_ _W2_    */
-                        , NULL, 0L, NULL);
-                cr_converted = TRUE;
-            }
         }
         if (converted)
             len = strlen( ptr);
@@ -1549,8 +1542,6 @@ static char *   at_eof(
     if (len && *(cp += (len - 1)) != '\n') {
         *++cp = '\n';                       /* Supplement <newline> */
         *++cp = EOS;
-        if (warn_level & 1)
-            cwarn( format, input, 0L, no_newline);
         return  infile->bptr = infile->buffer;
     }
     if (standard && infile->buffer < infile->bptr) {
